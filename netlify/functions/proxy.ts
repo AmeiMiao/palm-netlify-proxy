@@ -63,19 +63,29 @@ export default async (request: Request, context: Context) => {
     url.searchParams.append(key, value);
   });
 
+  // 注意：request headers 中保留 accept-encoding 是合理的，让上游知道可以返回压缩数据
   const headers = pickHeaders(request.headers, ["content-type", "authorization", "x-goog-api-client", "x-goog-api-key", "accept-encoding"]);
 
   const response = await fetch(url, {
     body: request.body,
     method: request.method,
     headers,
-    duplex: 'half' as 'half', // 类型断言 'half' as 'half' 是 TypeScript 需要的
+    duplex: 'half' as 'half',
   });
 
-  const responseHeaders = {
-    ...CORS_HEADERS,
-    ...Object.fromEntries(response.headers),
-  };
+  // *** 修改这里 ***
+  const responseHeaders = new Headers(response.headers); // 创建一个新的 Headers 对象，方便删除
+  
+  // 移除可能导致客户端解压错误的头
+  responseHeaders.delete('content-encoding');
+  responseHeaders.delete('content-length'); // 内容长度通常也会因解压而改变，最好移除
+  
+  // 添加 CORS 头
+  for (const header in CORS_HEADERS) {
+      responseHeaders.set(header, CORS_HEADERS[header]);
+  }
+  // *** 修改结束 ***
+
 
   return new Response(response.body, {
     headers: responseHeaders,
