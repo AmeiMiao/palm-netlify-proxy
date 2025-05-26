@@ -69,6 +69,7 @@ export default async (request: Request, context: Context) => {
     body: request.body,
     method: request.method,
     headers,
+    duplex: 'half' as 'half', // 类型断言 'half' as 'half' 是 TypeScript 需要的
   });
 
   const responseHeaders = {
